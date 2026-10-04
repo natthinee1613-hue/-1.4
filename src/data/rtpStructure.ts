@@ -923,6 +923,96 @@ export const ALL_DIVISIONS_LIST: string[] = getAllDivisionsFlat().map((d) => d.d
 
 import { PoliceOfficer } from '../types/personnel';
 
+export interface FastOfficerIndex {
+  exactDivMap: Map<string, PoliceOfficer[]>;
+  cleanDivMap: Map<string, PoliceOfficer[]>;
+  allOfficers: PoliceOfficer[];
+}
+
+export function buildOfficerIndex(allOfficers: PoliceOfficer[]): FastOfficerIndex {
+  const exactDivMap = new Map<string, PoliceOfficer[]>();
+  const cleanDivMap = new Map<string, PoliceOfficer[]>();
+
+  for (let i = 0; i < allOfficers.length; i++) {
+    const o = allOfficers[i];
+
+    // Division exact
+    const div = o.division?.trim();
+    if (div) {
+      let list = exactDivMap.get(div);
+      if (!list) {
+        list = [];
+        exactDivMap.set(div, list);
+      }
+      list.push(o);
+
+      const clean = div.replace(/\(.*?\)/g, '').trim();
+      if (clean && clean !== div) {
+        let cleanList = cleanDivMap.get(clean);
+        if (!cleanList) {
+          cleanList = [];
+          cleanDivMap.set(clean, cleanList);
+        }
+        cleanList.push(o);
+      }
+    }
+
+    // SubDivision exact
+    const sub = o.subDivision?.trim();
+    if (sub && sub !== div) {
+      let list = exactDivMap.get(sub);
+      if (!list) {
+        list = [];
+        exactDivMap.set(sub, list);
+      }
+      list.push(o);
+
+      const cleanSub = sub.replace(/\(.*?\)/g, '').trim();
+      if (cleanSub && cleanSub !== sub) {
+        let cleanList = cleanDivMap.get(cleanSub);
+        if (!cleanList) {
+          cleanList = [];
+          cleanDivMap.set(cleanSub, cleanList);
+        }
+        cleanList.push(o);
+      }
+    }
+  }
+
+  return { exactDivMap, cleanDivMap, allOfficers };
+}
+
+// Fast indexed helper: Match officers from database to a division string instantly
+export function getOfficersForDivisionIndexed(
+  divString: string,
+  bureau: PoliceBureauNode,
+  index: FastOfficerIndex
+): {
+  matchedDivisionName: string;
+  officers: PoliceOfficer[];
+  cleanName: string;
+  acronym: string;
+} {
+  const cleanName = divString.replace(/\(.*?\)/g, '').trim();
+  const acronymMatch = divString.match(/\((.*?)\)/);
+  const acronym = acronymMatch ? acronymMatch[1].trim() : '';
+
+  // 1. Exact match from index
+  const exact = index.exactDivMap.get(divString);
+  if (exact && exact.length > 0) {
+    return { matchedDivisionName: divString, officers: exact, cleanName, acronym };
+  }
+
+  // 2. Clean name match from index
+  const cleanMatched = index.cleanDivMap.get(cleanName);
+  if (cleanMatched && cleanMatched.length > 0) {
+    return { matchedDivisionName: cleanMatched[0].division || divString, officers: cleanMatched, cleanName, acronym };
+  }
+
+  // 3. Fallback to standard fuzzy matcher
+  return getOfficersForDivision(divString, bureau, index.allOfficers);
+}
+
 // Helper: Match officers from database to a division string
 export function getOfficersForDivision(
   divString: string,

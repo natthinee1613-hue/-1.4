@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { PoliceOfficer } from '../types/personnel';
 import { AppTheme } from '../data/themes';
 import { CustomThemeSettings } from '../types/themeCustomization';
@@ -62,6 +62,9 @@ import {
   PoliceBureauNode,
   RTP_BUREAUS_DATA,
   getOfficersForDivision,
+  buildOfficerIndex,
+  getOfficersForDivisionIndexed,
+  FastOfficerIndex,
 } from '../data/rtpStructure';
 import { DivisionsDirectoryTable } from './DivisionsDirectoryTable';
 
@@ -163,9 +166,12 @@ export const OrgChart: React.FC<OrgChartProps> = ({
     });
   }, [selectedGroup, searchTerm]);
 
+  // Fast Officer Index for O(1) instantaneous lookup
+  const officerIndex = useMemo(() => buildOfficerIndex(officers), [officers]);
+
   // Open division modal handler
-  const handleOpenDivisionDetail = (divRawName: string, bureau: PoliceBureauNode) => {
-    const { matchedDivisionName } = getOfficersForDivision(divRawName, bureau, officers);
+  const handleOpenDivisionDetail = useCallback((divRawName: string, bureau: PoliceBureauNode) => {
+    const { matchedDivisionName } = getOfficersForDivisionIndexed(divRawName, bureau, officerIndex);
     setSelectedDivisionModal({
       divisionRawName: divRawName,
       bureau,
@@ -173,15 +179,15 @@ export const OrgChart: React.FC<OrgChartProps> = ({
     });
     setDivisionModalSearch('');
     setDivisionModalStatus('all');
-  };
+  }, [officerIndex]);
 
   // Current officers for selected division modal
   const activeDivisionData = useMemo(() => {
     if (!selectedDivisionModal) return null;
-    const { matchedDivisionName, officers: matchedOffs, cleanName } = getOfficersForDivision(
+    const { matchedDivisionName, officers: matchedOffs, cleanName } = getOfficersForDivisionIndexed(
       selectedDivisionModal.divisionRawName,
       selectedDivisionModal.bureau,
-      officers
+      officerIndex
     );
 
     const filtered = matchedOffs.filter((o) => {
@@ -229,73 +235,137 @@ export const OrgChart: React.FC<OrgChartProps> = ({
   const specCount = RTP_BUREAUS.filter((b) => b.group === 'specialized').length;
   const eduCount = RTP_BUREAUS.filter((b) => b.group === 'education').length;
 
+  const isDark = currentTheme.isDark;
+
   return (
     <div className="space-y-6 animate-fadeIn">
-      {/* 1. Header Card - Royal Thai Police Organization (สำนักงานตำรวจแห่งชาติ ตร.) matching User Reference */}
-      <div className="rounded-2xl border-2 border-[#C5A059] bg-gradient-to-r from-[#0B2545] via-[#0D2E56] to-[#071930] text-white p-5 sm:p-6 shadow-xl relative overflow-hidden">
+      {/* 1. Header Card - Royal Thai Police Organization (สำนักงานตำรวจแห่งชาติ ตร.) */}
+      <div
+        className={`rounded-2xl border-2 p-5 sm:p-6 shadow-xl relative overflow-hidden transition-all ${
+          isDark
+            ? 'border-[#C5A059] bg-gradient-to-r from-[#0B2545] via-[#0D2E56] to-[#071930] text-white'
+            : 'border-[#38BDF8] bg-gradient-to-r from-white via-[#F0F9FF] to-[#E0F2FE] text-slate-900'
+        }`}
+      >
         {/* Subtle Royal Thai Kanok Background */}
-        <ThaiKanokPattern opacity={0.12} />
+        <ThaiKanokPattern opacity={isDark ? 0.12 : 0.08} />
 
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
           {/* Brand & Crest Info */}
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-b from-[#143765] to-[#081C36] border-2 border-[#D4AF37] flex items-center justify-center p-2 shadow-lg shadow-black/40 shrink-0">
-              <PoliceEmblem className="w-10 h-10 text-amber-300 filter drop-shadow-md" />
+            <div
+              className={`w-14 h-14 rounded-2xl border-2 flex items-center justify-center p-2 shadow-lg shrink-0 ${
+                isDark
+                  ? 'bg-gradient-to-b from-[#143765] to-[#081C36] border-[#D4AF37] shadow-black/40'
+                  : 'bg-gradient-to-b from-sky-100 to-white border-sky-400 shadow-sky-500/10'
+              }`}
+            >
+              <PoliceEmblem className={`w-10 h-10 filter drop-shadow-md ${isDark ? 'text-amber-300' : 'text-sky-700'}`} />
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight flex items-center gap-2">
-                  <span className="gold-shimmer-text">สำนักงานตำรวจแห่งชาติ (ตร.)</span>
+                  <span className={isDark ? 'gold-shimmer-text' : 'text-[#0B2545] font-black'}>
+                    สำนักงานตำรวจแห่งชาติ (ตร.)
+                  </span>
                 </h1>
               </div>
-              <p className="text-xs sm:text-sm mt-0.5 text-[#FFE066] font-bold drop-shadow-xs">
+              <p className={`text-xs sm:text-sm mt-0.5 font-bold drop-shadow-xs ${isDark ? 'text-[#FFE066]' : 'text-[#0284C7]'}`}>
                 ระบบบริหารจัดการทรัพยากรบุคคล
               </p>
-              <p className="text-xs mt-1 text-slate-200 font-medium">
+              <p className={`text-xs mt-1 font-medium ${isDark ? 'text-slate-200' : 'text-slate-600'}`}>
                 โครงสร้างองค์กร และการบริหารกำลังพลแบบรวมศูนย์ - คลิกเลือกหน่วยงานเพื่อดูรายละเอียด
               </p>
             </div>
           </div>
 
-          {/* Quick Metrics Bar - Executive Dark Charcoal & Gold Palette */}
+          {/* Quick Metrics Bar */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 shrink-0">
-            <div className="px-3.5 py-2.5 rounded-xl border border-[#C5A059]/70 bg-gradient-to-b from-[#222B3A] to-[#171E2A] text-center shadow-xs">
-              <div className="text-[11px] text-slate-200 font-black whitespace-nowrap">ฝ่ายอำนวยการและสนับสนุน</div>
-              <div className="text-base font-black text-amber-300 font-mono mt-0.5">11 บช.</div>
-              <div className="text-xs mt-1 flex justify-center text-amber-400 font-extrabold">🏛️ 📋</div>
+            <div
+              className={`px-3.5 py-2.5 rounded-xl border text-center shadow-xs ${
+                isDark
+                  ? 'border-[#C5A059]/70 bg-gradient-to-b from-[#222B3A] to-[#171E2A]'
+                  : 'border-sky-200 bg-white/90'
+              }`}
+            >
+              <div className={`text-[11px] font-black whitespace-nowrap ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
+                ฝ่ายอำนวยการและสนับสนุน
+              </div>
+              <div className={`text-base font-black font-mono mt-0.5 ${isDark ? 'text-amber-300' : 'text-sky-700'}`}>
+                11 บช.
+              </div>
+              <div className="text-xs mt-1 flex justify-center text-amber-500 font-extrabold">🏛️ 📋</div>
             </div>
 
-            <div className="px-3.5 py-2.5 rounded-xl border border-[#C5A059]/70 bg-gradient-to-b from-[#222B3A] to-[#171E2A] text-center shadow-xs">
-              <div className="text-[11px] text-slate-200 font-black whitespace-nowrap">ฝ่ายปฏิบัติการ</div>
-              <div className="text-base font-black text-amber-300 font-mono mt-0.5">10 บช.</div>
-              <div className="text-xs mt-1 flex justify-center text-blue-400 font-extrabold">🛡️ 👮</div>
+            <div
+              className={`px-3.5 py-2.5 rounded-xl border text-center shadow-xs ${
+                isDark
+                  ? 'border-[#C5A059]/70 bg-gradient-to-b from-[#222B3A] to-[#171E2A]'
+                  : 'border-sky-200 bg-white/90'
+              }`}
+            >
+              <div className={`text-[11px] font-black whitespace-nowrap ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
+                ฝ่ายปฏิบัติการ
+              </div>
+              <div className={`text-base font-black font-mono mt-0.5 ${isDark ? 'text-amber-300' : 'text-sky-700'}`}>
+                10 บช.
+              </div>
+              <div className="text-xs mt-1 flex justify-center text-blue-500 font-extrabold">🛡️ 👮</div>
             </div>
 
-            <div className="px-3.5 py-2.5 rounded-xl border border-[#C5A059]/70 bg-gradient-to-b from-[#222B3A] to-[#171E2A] text-center shadow-xs">
-              <div className="text-[11px] text-slate-200 font-black whitespace-nowrap">ฝ่ายสอบสวนและสืบสวน</div>
-              <div className="text-base font-black text-amber-300 font-mono mt-0.5">7 บช.</div>
-              <div className="text-xs mt-1 flex justify-center text-emerald-400 font-extrabold">🔍 ⚖️</div>
+            <div
+              className={`px-3.5 py-2.5 rounded-xl border text-center shadow-xs ${
+                isDark
+                  ? 'border-[#C5A059]/70 bg-gradient-to-b from-[#222B3A] to-[#171E2A]'
+                  : 'border-sky-200 bg-white/90'
+              }`}
+            >
+              <div className={`text-[11px] font-black whitespace-nowrap ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
+                ฝ่ายสอบสวนและสืบสวน
+              </div>
+              <div className={`text-base font-black font-mono mt-0.5 ${isDark ? 'text-amber-300' : 'text-sky-700'}`}>
+                7 บช.
+              </div>
+              <div className="text-xs mt-1 flex justify-center text-emerald-500 font-extrabold">🔍 ⚖️</div>
             </div>
 
-            <div className="px-3.5 py-2.5 rounded-xl border border-[#C5A059]/70 bg-gradient-to-b from-[#222B3A] to-[#171E2A] text-center shadow-xs">
-              <div className="text-[11px] text-slate-200 font-black whitespace-nowrap">สถาบันการศึกษาและวิจัย</div>
-              <div className="text-base font-black text-amber-300 font-mono mt-0.5">2 หน่วย</div>
-              <div className="text-xs mt-1 flex justify-center text-purple-400 font-extrabold">🎓 📚</div>
+            <div
+              className={`px-3.5 py-2.5 rounded-xl border text-center shadow-xs ${
+                isDark
+                  ? 'border-[#C5A059]/70 bg-gradient-to-b from-[#222B3A] to-[#171E2A]'
+                  : 'border-sky-200 bg-white/90'
+              }`}
+            >
+              <div className={`text-[11px] font-black whitespace-nowrap ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
+                สถาบันการศึกษาและวิจัย
+              </div>
+              <div className={`text-base font-black font-mono mt-0.5 ${isDark ? 'text-amber-300' : 'text-sky-700'}`}>
+                2 หน่วย
+              </div>
+              <div className="text-xs mt-1 flex justify-center text-purple-500 font-extrabold">🎓 📚</div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* 2. Controls & Filter Bar - Dark Slate Gray & Gold Theme */}
-      <div className="p-3 rounded-2xl border border-[#374151] bg-[#1E2533] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
-        {/* 4 Pillars Filter Tabs matching Reference */}
+      {/* 2. Controls & Filter Bar */}
+      <div
+        className={`p-3 rounded-2xl border shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3 ${
+          isDark ? 'border-[#374151] bg-[#1E2533]' : 'border-slate-200 bg-white'
+        }`}
+      >
+        {/* 4 Pillars Filter Tabs */}
         <div className="flex items-center gap-1.5 overflow-x-auto max-w-full pb-1 md:pb-0">
           <button
             onClick={() => setSelectedGroup('all')}
             className={`px-3.5 py-1.5 rounded-xl text-xs font-black whitespace-nowrap transition-all cursor-pointer ${
               selectedGroup === 'all'
-                ? 'bg-[#0B2545] text-[#FFE066] border border-amber-400/90 shadow-xs ring-1 ring-amber-400/50'
-                : 'bg-[#283142] text-slate-200 border border-[#3E4A5E] hover:border-amber-400 hover:bg-[#313C4F] font-extrabold'
+                ? isDark
+                  ? 'bg-[#0B2545] text-[#FFE066] border border-amber-400/90 shadow-xs ring-1 ring-amber-400/50'
+                  : 'bg-[#E0F2FE] text-[#0369A1] border border-[#38BDF8] shadow-xs ring-1 ring-sky-400/50'
+                : isDark
+                ? 'bg-[#283142] text-slate-200 border border-[#3E4A5E] hover:border-amber-400 hover:bg-[#313C4F] font-extrabold'
+                : 'bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200/80 hover:text-slate-900 font-bold'
             }`}
           >
             ทั้งหมด (32)
@@ -304,8 +374,12 @@ export const OrgChart: React.FC<OrgChartProps> = ({
             onClick={() => setSelectedGroup('command_support')}
             className={`px-3.5 py-1.5 rounded-xl text-xs font-black whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
               selectedGroup === 'command_support'
-                ? 'bg-[#0B2545] text-[#FFE066] border border-amber-400/90 shadow-xs ring-1 ring-amber-400/50'
-                : 'bg-[#283142] text-slate-200 border border-[#3E4A5E] hover:border-amber-400 hover:bg-[#313C4F] font-extrabold'
+                ? isDark
+                  ? 'bg-[#0B2545] text-[#FFE066] border border-amber-400/90 shadow-xs ring-1 ring-amber-400/50'
+                  : 'bg-[#E0F2FE] text-[#0369A1] border border-[#38BDF8] shadow-xs ring-1 ring-sky-400/50'
+                : isDark
+                ? 'bg-[#283142] text-slate-200 border border-[#3E4A5E] hover:border-amber-400 hover:bg-[#313C4F] font-extrabold'
+                : 'bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200/80 hover:text-slate-900 font-bold'
             }`}
           >
             <span>🛡️</span>
@@ -315,8 +389,12 @@ export const OrgChart: React.FC<OrgChartProps> = ({
             onClick={() => setSelectedGroup('area_commands')}
             className={`px-3.5 py-1.5 rounded-xl text-xs font-black whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
               selectedGroup === 'area_commands'
-                ? 'bg-[#0B2545] text-[#FFE066] border border-amber-400/90 shadow-xs ring-1 ring-amber-400/50'
-                : 'bg-[#283142] text-slate-200 border border-[#3E4A5E] hover:border-amber-400 hover:bg-[#313C4F] font-extrabold'
+                ? isDark
+                  ? 'bg-[#0B2545] text-[#FFE066] border border-amber-400/90 shadow-xs ring-1 ring-amber-400/50'
+                  : 'bg-[#E0F2FE] text-[#0369A1] border border-[#38BDF8] shadow-xs ring-1 ring-sky-400/50'
+                : isDark
+                ? 'bg-[#283142] text-slate-200 border border-[#3E4A5E] hover:border-amber-400 hover:bg-[#313C4F] font-extrabold'
+                : 'bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200/80 hover:text-slate-900 font-bold'
             }`}
           >
             <span>🎖️</span>
@@ -326,8 +404,12 @@ export const OrgChart: React.FC<OrgChartProps> = ({
             onClick={() => setSelectedGroup('specialized')}
             className={`px-3.5 py-1.5 rounded-xl text-xs font-black whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
               selectedGroup === 'specialized'
-                ? 'bg-[#0B2545] text-[#FFE066] border border-amber-400/90 shadow-xs ring-1 ring-amber-400/50'
-                : 'bg-[#283142] text-slate-200 border border-[#3E4A5E] hover:border-amber-400 hover:bg-[#313C4F] font-extrabold'
+                ? isDark
+                  ? 'bg-[#0B2545] text-[#FFE066] border border-amber-400/90 shadow-xs ring-1 ring-amber-400/50'
+                  : 'bg-[#E0F2FE] text-[#0369A1] border border-[#38BDF8] shadow-xs ring-1 ring-sky-400/50'
+                : isDark
+                ? 'bg-[#283142] text-slate-200 border border-[#3E4A5E] hover:border-amber-400 hover:bg-[#313C4F] font-extrabold'
+                : 'bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200/80 hover:text-slate-900 font-bold'
             }`}
           >
             <span>🔍</span>
@@ -344,12 +426,16 @@ export const OrgChart: React.FC<OrgChartProps> = ({
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="ค้นหากองบัญชาการ, บก./กอง..."
-              className="w-full pl-8 pr-3 py-1.5 text-xs font-bold rounded-xl border border-[#3E4A5E] bg-[#171D28] text-slate-100 placeholder-slate-400 focus:border-[#C5A059] focus:ring-1 focus:ring-amber-400/30 outline-hidden transition-all shadow-2xs"
+              className={`w-full pl-8 pr-3 py-1.5 text-xs font-bold rounded-xl border outline-hidden transition-all shadow-2xs ${
+                isDark
+                  ? 'border-[#3E4A5E] bg-[#171D28] text-slate-100 placeholder-slate-400 focus:border-[#C5A059]'
+                  : 'border-slate-300 bg-slate-50 text-slate-900 placeholder-slate-500 focus:border-sky-500 focus:bg-white'
+              }`}
             />
             {searchTerm && (
               <button
                 onClick={() => setSearchTerm('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 hover:text-slate-200"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 hover:text-slate-600"
               >
                 ✕
               </button>
@@ -357,13 +443,21 @@ export const OrgChart: React.FC<OrgChartProps> = ({
           </div>
 
           {/* Layout Switcher */}
-          <div className="flex items-center p-0.5 rounded-xl bg-[#111620] border border-[#C5A059] text-[11px] gap-0.5 shrink-0 shadow-2xs">
+          <div
+            className={`flex items-center p-0.5 rounded-xl text-[11px] gap-0.5 shrink-0 shadow-2xs ${
+              isDark ? 'bg-[#111620] border border-[#C5A059]' : 'bg-slate-100 border border-slate-300'
+            }`}
+          >
             <button
               onClick={() => setViewLayout('hierarchy')}
               className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-all cursor-pointer font-black ${
                 viewLayout === 'hierarchy'
-                  ? 'bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 shadow-xs'
-                  : 'text-slate-300 hover:text-white font-bold'
+                  ? isDark
+                    ? 'bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 shadow-xs'
+                    : 'bg-[#0369A1] text-white shadow-xs font-black'
+                  : isDark
+                  ? 'text-slate-300 hover:text-white font-bold'
+                  : 'text-slate-700 hover:text-slate-900 font-bold'
               }`}
               title="ผังสายบังคับบัญชาแบบต้นไม้ (Hierarchy Tree)"
             >
@@ -374,8 +468,12 @@ export const OrgChart: React.FC<OrgChartProps> = ({
               onClick={() => setViewLayout('cards')}
               className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-all cursor-pointer font-black ${
                 viewLayout === 'cards'
-                  ? 'bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 shadow-xs'
-                  : 'text-slate-300 hover:text-white font-bold'
+                  ? isDark
+                    ? 'bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 shadow-xs'
+                    : 'bg-[#0369A1] text-white shadow-xs font-black'
+                  : isDark
+                  ? 'text-slate-300 hover:text-white font-bold'
+                  : 'text-slate-700 hover:text-slate-900 font-bold'
               }`}
               title="การ์ดดัชนีหน่วยงานทั้งหมด (Grid Cards)"
             >
@@ -386,8 +484,12 @@ export const OrgChart: React.FC<OrgChartProps> = ({
               onClick={() => setViewLayout('divisions_table')}
               className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-all cursor-pointer font-black ${
                 viewLayout === 'divisions_table'
-                  ? 'bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 shadow-xs'
-                  : 'text-slate-300 hover:text-white font-bold'
+                  ? isDark
+                    ? 'bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 shadow-xs'
+                    : 'bg-[#0369A1] text-white shadow-xs font-black'
+                  : isDark
+                  ? 'text-slate-300 hover:text-white font-bold'
+                  : 'text-slate-700 hover:text-slate-900 font-bold'
               }`}
               title="ตารางหน่วยงานระดับกองบังคับการ (บก. / กอง) ในสังกัด แต่ละ บช."
             >
@@ -400,10 +502,14 @@ export const OrgChart: React.FC<OrgChartProps> = ({
           {onOpenThemeCustomizer && (
             <button
               onClick={onOpenThemeCustomizer}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#C5A059] bg-gradient-to-r from-amber-500/15 via-[#222938] to-amber-500/15 hover:from-amber-500/30 hover:to-amber-500/30 text-amber-300 hover:text-amber-200 text-xs font-black transition-all cursor-pointer shadow-2xs shrink-0"
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-black transition-all cursor-pointer shadow-2xs shrink-0 ${
+                isDark
+                  ? 'border-[#C5A059] bg-gradient-to-r from-amber-500/15 via-[#222938] to-amber-500/15 hover:from-amber-500/30 hover:to-amber-500/30 text-amber-300'
+                  : 'border-sky-300 bg-sky-50 text-sky-800 hover:bg-sky-100'
+              }`}
               title="ปรับแต่งสีธีมแผนผัง สีพื้นหลังหลัก และสีตัวอักษร"
             >
-              <Palette className="w-3.5 h-3.5 text-amber-300" />
+              <Palette className={`w-3.5 h-3.5 ${isDark ? 'text-amber-300' : 'text-sky-700'}`} />
               <span className="hidden sm:inline">สีธีมแผนผัง</span>
             </button>
           )}
@@ -421,35 +527,65 @@ export const OrgChart: React.FC<OrgChartProps> = ({
         />
       ) : (
         <>
-          {/* TOP LEADERSHIP NODE: ผู้บัญชาการตำรวจแห่งชาติ (ผบ.ตร.) Matching Reference Image */}
+          {/* TOP LEADERSHIP NODE: ผู้บัญชาการตำรวจแห่งชาติ (ผบ.ตร.) */}
           <div className="flex flex-col lg:flex-row items-center justify-center gap-4 sm:gap-6 my-2">
             {/* Left Hierarchy Stack Pills */}
             <div className="hidden xl:flex flex-col gap-2.5 items-end">
-              <div className="px-4 py-1.5 rounded-xl border-2 border-[#C5A059] bg-[#222938] text-amber-300 font-black text-xs shadow-xs text-center min-w-[105px]">
+              <div
+                className={`px-4 py-1.5 rounded-xl border-2 font-black text-xs shadow-xs text-center min-w-[105px] ${
+                  isDark ? 'border-[#C5A059] bg-[#222938] text-amber-300' : 'border-sky-400 bg-sky-50 text-sky-900 font-black'
+                }`}
+              >
                 ผบ.ตร.
               </div>
-              <div className="px-4 py-1.5 rounded-xl border border-[#C5A059]/70 bg-[#222938] text-slate-200 font-bold text-xs shadow-xs text-center min-w-[105px]">
+              <div
+                className={`px-4 py-1.5 rounded-xl border font-bold text-xs shadow-xs text-center min-w-[105px] ${
+                  isDark ? 'border-[#C5A059]/70 bg-[#222938] text-slate-200' : 'border-slate-300 bg-white text-slate-800'
+                }`}
+              >
                 รอง ตร.
               </div>
-              <div className="px-4 py-1.5 rounded-xl border border-[#C5A059]/70 bg-[#222938] text-slate-200 font-bold text-xs shadow-xs text-center min-w-[105px]">
+              <div
+                className={`px-4 py-1.5 rounded-xl border font-bold text-xs shadow-xs text-center min-w-[105px] ${
+                  isDark ? 'border-[#C5A059]/70 bg-[#222938] text-slate-200' : 'border-slate-300 bg-white text-slate-800'
+                }`}
+              >
                 ผู้ช่วย ตร.
               </div>
-              <div className="px-4 py-1.5 rounded-xl border border-[#C5A059]/70 bg-[#222938] text-slate-200 font-bold text-xs shadow-xs text-center min-w-[105px]">
-                ตราง ผบ.ตร.
+              <div
+                className={`px-4 py-1.5 rounded-xl border font-bold text-xs shadow-xs text-center min-w-[105px] ${
+                  isDark ? 'border-[#C5A059]/70 bg-[#222938] text-slate-200' : 'border-slate-300 bg-white text-slate-800'
+                }`}
+              >
+                ตร.ผบ.ตร.
               </div>
             </div>
 
             {/* Tree Line Connector */}
-            <div className="hidden xl:flex items-center text-[#C5A059]">
-              <div className="w-8 h-0.5 bg-[#C5A059]" />
-              <div className="w-2.5 h-2.5 rotate-45 border-t border-r border-[#C5A059] bg-[#222938]" />
+            <div className={`hidden xl:flex items-center ${isDark ? 'text-[#C5A059]' : 'text-[#0284C7]'}`}>
+              <div className={`w-8 h-0.5 ${isDark ? 'bg-[#C5A059]' : 'bg-[#0284C7]'}`} />
+              <div
+                className={`w-2.5 h-2.5 rotate-45 border-t border-r ${
+                  isDark ? 'border-[#C5A059] bg-[#222938]' : 'border-[#0284C7] bg-white'
+                }`}
+              />
             </div>
 
-            {/* Central Main Leadership Card (Navy Top Header + Dark Charcoal Lower Section) */}
-            <div className="w-full max-w-2xl rounded-2xl border-2 border-[#C5A059] bg-[#1E2533] shadow-lg overflow-hidden">
+            {/* Central Main Leadership Card */}
+            <div
+              className={`w-full max-w-2xl rounded-2xl border-2 shadow-lg overflow-hidden ${
+                isDark ? 'border-[#C5A059] bg-[#1E2533]' : 'border-sky-400 bg-white'
+              }`}
+            >
               {/* Card Navy Header */}
-              <div className="p-4 sm:p-5 bg-gradient-to-r from-[#0B2545] via-[#0D2E56] to-[#071930] text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 relative overflow-hidden">
-                <ThaiKanokPattern opacity={0.1} />
+              <div
+                className={`p-4 sm:p-5 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 relative overflow-hidden ${
+                  isDark
+                    ? 'bg-gradient-to-r from-[#0B2545] via-[#0D2E56] to-[#071930]'
+                    : 'bg-gradient-to-r from-[#0369A1] via-[#0284C7] to-[#0369A1]'
+                }`}
+              >
+                <ThaiKanokPattern opacity={0.12} />
 
                 <div className="relative z-10 max-w-xl">
                   <h2 className="text-base sm:text-lg font-extrabold text-white tracking-wide">
@@ -470,21 +606,51 @@ export const OrgChart: React.FC<OrgChartProps> = ({
                 </div>
               </div>
 
-              {/* Lower 3-Tier Leadership Badges in Dark Charcoal Slate */}
-              <div className="p-3 sm:p-4 grid grid-cols-1 sm:grid-cols-3 gap-2.5 bg-[#1E2533]">
-                <div className="p-3 rounded-xl border-2 border-[#D4AF37] bg-gradient-to-b from-[#283142] to-[#1C2330] flex flex-col justify-center shadow-xs">
-                  <div className="text-xs font-black text-slate-100 truncate">ผู้บัญชาการตำรวจแห่งชาติ</div>
-                  <div className="text-[11px] text-amber-300 font-extrabold truncate mt-0.5">พล.ต.อ. (ผู้บัญชาการ)</div>
+              {/* Lower 3-Tier Leadership Badges */}
+              <div className={`p-3 sm:p-4 grid grid-cols-1 sm:grid-cols-3 gap-2.5 ${isDark ? 'bg-[#1E2533]' : 'bg-slate-50'}`}>
+                <div
+                  className={`p-3 rounded-xl border-2 flex flex-col justify-center shadow-xs ${
+                    isDark
+                      ? 'border-[#D4AF37] bg-gradient-to-b from-[#283142] to-[#1C2330]'
+                      : 'border-sky-300 bg-white'
+                  }`}
+                >
+                  <div className={`text-xs font-black truncate ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+                    ผู้บัญชาการตำรวจแห่งชาติ
+                  </div>
+                  <div className={`text-[11px] font-extrabold truncate mt-0.5 ${isDark ? 'text-amber-300' : 'text-sky-700'}`}>
+                    พล.ต.อ. (ผู้บัญชาการ)
+                  </div>
                 </div>
 
-                <div className="p-3 rounded-xl border border-[#C5A059] bg-gradient-to-b from-[#283142] to-[#1C2330] flex flex-col justify-center shadow-xs">
-                  <div className="text-xs font-black text-slate-100 truncate">รอง ผบ.ตร. / จตช.</div>
-                  <div className="text-[11px] text-amber-300 font-extrabold truncate mt-0.5">พล.ต.อ. (คุมงาน 6 ด้านหลัก)</div>
+                <div
+                  className={`p-3 rounded-xl border flex flex-col justify-center shadow-xs ${
+                    isDark
+                      ? 'border-[#C5A059] bg-gradient-to-b from-[#283142] to-[#1C2330]'
+                      : 'border-slate-300 bg-white'
+                  }`}
+                >
+                  <div className={`text-xs font-black truncate ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+                    รอง ผบ.ตร. / จตช.
+                  </div>
+                  <div className={`text-[11px] font-extrabold truncate mt-0.5 ${isDark ? 'text-amber-300' : 'text-sky-700'}`}>
+                    พล.ต.อ. (คุมงาน 6 ด้านหลัก)
+                  </div>
                 </div>
 
-                <div className="p-3 rounded-xl border border-[#C5A059] bg-gradient-to-b from-[#283142] to-[#1C2330] flex flex-col justify-center shadow-xs">
-                  <div className="text-xs font-black text-slate-100 truncate">ผู้ช่วย ผบ.ตร.</div>
-                  <div className="text-[11px] text-amber-300 font-extrabold truncate mt-0.5">พล.ต.ท. (กำกับการปฏิบัติการ)</div>
+                <div
+                  className={`p-3 rounded-xl border flex flex-col justify-center shadow-xs ${
+                    isDark
+                      ? 'border-[#C5A059] bg-gradient-to-b from-[#283142] to-[#1C2330]'
+                      : 'border-slate-300 bg-white'
+                  }`}
+                >
+                  <div className={`text-xs font-black truncate ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+                    ผู้ช่วย ผบ.ตร.
+                  </div>
+                  <div className={`text-[11px] font-extrabold truncate mt-0.5 ${isDark ? 'text-amber-300' : 'text-sky-700'}`}>
+                    พล.ต.ท. (กำกับการปฏิบัติการ)
+                  </div>
                 </div>
               </div>
             </div>
@@ -492,9 +658,9 @@ export const OrgChart: React.FC<OrgChartProps> = ({
 
           {/* Tree Line Connector to Pillars */}
           <div className="flex flex-col items-center my-1">
-            <div className="w-0.5 h-4 bg-[#C5A059]" />
-            <div className="w-32 h-0.5 rounded-full bg-[#C5A059]" />
-            <div className="w-0.5 h-3 bg-[#C5A059]" />
+            <div className={`w-0.5 h-4 ${isDark ? 'bg-[#C5A059]' : 'bg-[#0284C7]'}`} />
+            <div className={`w-32 h-0.5 rounded-full ${isDark ? 'bg-[#C5A059]' : 'bg-[#0284C7]'}`} />
+            <div className={`w-0.5 h-3 ${isDark ? 'bg-[#C5A059]' : 'bg-[#0284C7]'}`} />
           </div>
 
           {/* 4. MAIN BODY: 4 PILLARS OR CARDS VIEW */}
@@ -1144,6 +1310,7 @@ interface BureauCardProps {
   bureau: PoliceBureauNode;
   rosterStats?: { total: number; occupied: number; vacant: number };
   officers: PoliceOfficer[];
+  officerIndex?: FastOfficerIndex;
   currentTheme: AppTheme;
   customThemeSettings?: CustomThemeSettings;
   onOpenDetail: () => void;
@@ -1190,10 +1357,11 @@ const getBureauIllustration = (bureauCode: string) => {
   }
 };
 
-const BureauCard: React.FC<BureauCardProps> = ({
+const BureauCardComponent: React.FC<BureauCardProps> = ({
   bureau,
   rosterStats,
   officers,
+  officerIndex,
   currentTheme,
   onOpenDetail,
   onOpenDivisionDetail,
@@ -1201,21 +1369,34 @@ const BureauCard: React.FC<BureauCardProps> = ({
 }) => {
   const hasRosterData = rosterStats && rosterStats.total > 0;
   const illustration = getBureauIllustration(bureau.code);
+  const isDark = currentTheme.isDark;
 
   return (
     <div
       onClick={onOpenDetail}
-      className="rounded-2xl border border-[#374151] bg-[#222938] hover:bg-[#283144] p-4 transition-all duration-200 cursor-pointer group flex flex-col justify-between shadow-xs hover:shadow-xl hover:border-[#C5A059] hover:-translate-y-0.5"
+      className={`rounded-2xl border p-4 transition-all duration-200 cursor-pointer group flex flex-col justify-between shadow-xs hover:shadow-xl hover:-translate-y-0.5 ${
+        isDark
+          ? 'border-[#374151] bg-[#222938] hover:bg-[#283144] hover:border-[#C5A059]'
+          : 'border-slate-200/90 bg-white hover:bg-sky-50/20 hover:border-sky-400'
+      }`}
     >
       <div>
         {/* Card Header: Code, Category, and Top-Right Illustration Icon */}
         <div className="flex items-start justify-between gap-2 mb-2.5">
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-black px-2.5 py-0.5 rounded-lg border border-[#C5A059] bg-[#2C3547] text-amber-300 font-mono tracking-wide shadow-2xs">
+              <span
+                className={`text-xs font-black px-2.5 py-0.5 rounded-lg border font-mono tracking-wide shadow-2xs ${
+                  isDark
+                    ? 'border-[#C5A059] bg-[#2C3547] text-amber-300'
+                    : 'border-sky-300 bg-sky-50 text-sky-800'
+                }`}
+              >
                 {bureau.code}
               </span>
-              <span className="text-[11px] text-amber-400 font-bold truncate">{bureau.groupName}</span>
+              <span className={`text-[11px] font-bold truncate ${isDark ? 'text-amber-400' : 'text-sky-700'}`}>
+                {bureau.groupName}
+              </span>
             </div>
           </div>
 
@@ -1229,30 +1410,42 @@ const BureauCard: React.FC<BureauCardProps> = ({
         </div>
 
         {/* Bureau Full Name */}
-        <h4 className="text-sm sm:text-base font-black text-slate-100 group-hover:text-amber-300 transition-colors line-clamp-1">
+        <h4
+          className={`text-sm sm:text-base font-black transition-colors line-clamp-1 ${
+            isDark ? 'text-slate-100 group-hover:text-amber-300' : 'text-slate-900 group-hover:text-sky-800'
+          }`}
+        >
           {bureau.fullName}
         </h4>
 
         {/* Head Officer Title */}
-        <div className="text-xs text-amber-300/90 font-bold truncate mt-0.5">
+        <div className={`text-xs font-bold truncate mt-0.5 ${isDark ? 'text-amber-300/90' : 'text-sky-700'}`}>
           {bureau.headTitle}
         </div>
 
         {/* Description snippet */}
-        <p className="text-xs text-slate-300 line-clamp-2 mt-1.5 leading-relaxed font-normal">
+        <p className={`text-xs line-clamp-2 mt-1.5 leading-relaxed font-normal ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
           {bureau.description}
         </p>
 
         {/* Subordinate Divisions (บก./กอง) Direct Clickable Pills */}
-        <div className="mt-3 pt-2.5 border-t border-[#374151] bg-[#1A202C] p-2.5 rounded-xl">
-          <div className="flex items-center justify-between text-xs text-slate-200 font-black mb-1.5">
-            <span>หน่วยงานในสังกัด:</span>
-            <span className="font-mono text-amber-400 font-black">{bureau.subDivisions.length} บก.</span>
+        <div
+          className={`mt-3 pt-2.5 border p-2.5 rounded-xl ${
+            isDark ? 'border-[#374151] bg-[#1A202C]' : 'border-slate-200/90 bg-slate-50/90'
+          }`}
+        >
+          <div className="flex items-center justify-between text-xs font-black mb-1.5">
+            <span className={isDark ? 'text-slate-200' : 'text-slate-800'}>หน่วยงานในสังกัด:</span>
+            <span className={`font-mono font-black ${isDark ? 'text-amber-400' : 'text-sky-700'}`}>
+              {bureau.subDivisions.length} บก.
+            </span>
           </div>
 
           <div className="flex flex-wrap gap-1.5">
             {bureau.subDivisions.slice(0, 4).map((sub, idx) => {
-              const { officers: subOffs } = getOfficersForDivision(sub, bureau, officers);
+              const { officers: subOffs } = officerIndex
+                ? getOfficersForDivisionIndexed(sub, bureau, officerIndex)
+                : getOfficersForDivision(sub, bureau, officers);
               const cleanSubName = sub.replace(/\(.*?\)/g, '').trim();
 
               return (
@@ -1264,8 +1457,12 @@ const BureauCard: React.FC<BureauCardProps> = ({
                   }}
                   className={`text-[11px] px-2.5 py-1 rounded-lg border font-bold transition-all cursor-pointer flex items-center gap-1 shadow-2xs ${
                     subOffs.length > 0
-                      ? 'bg-emerald-950/80 border-emerald-500/80 text-emerald-200 hover:bg-emerald-900 font-black'
-                      : 'bg-[#252E3E] border-[#3B475B] text-slate-200 hover:bg-[#323D50] hover:text-white hover:border-[#C5A059]'
+                      ? isDark
+                        ? 'bg-emerald-950/80 border-emerald-500/80 text-emerald-200 hover:bg-emerald-900 font-black'
+                        : 'bg-emerald-50 border-emerald-300 text-emerald-900 font-black hover:bg-emerald-100'
+                      : isDark
+                      ? 'bg-[#252E3E] border-[#3B475B] text-slate-200 hover:bg-[#323D50] hover:text-white hover:border-[#C5A059]'
+                      : 'bg-white border-slate-200 text-slate-800 hover:bg-sky-50 hover:text-sky-900 hover:border-sky-400'
                   }`}
                   title={`คลิกเพื่อดูข้อมูล ${sub}`}
                 >
@@ -1285,7 +1482,11 @@ const BureauCard: React.FC<BureauCardProps> = ({
                   e.stopPropagation();
                   onOpenDetail();
                 }}
-                className="text-[11px] px-2 py-1 rounded-lg border border-[#C5A059]/60 bg-[#283142] text-amber-300 hover:bg-[#323E54] font-black transition-colors cursor-pointer shadow-2xs"
+                className={`text-[11px] px-2 py-1 rounded-lg border font-black transition-colors cursor-pointer shadow-2xs ${
+                  isDark
+                    ? 'border-[#C5A059]/60 bg-[#283142] text-amber-300 hover:bg-[#323E54]'
+                    : 'border-sky-300 bg-sky-50 text-sky-800 hover:bg-sky-100'
+                }`}
                 title="ดูหน่วยงานในสังกัดทั้งหมด"
               >
                 +{bureau.subDivisions.length - 4} บก.
@@ -1296,8 +1497,8 @@ const BureauCard: React.FC<BureauCardProps> = ({
       </div>
 
       {/* Card Footer: Jurisdiction & Action */}
-      <div className="mt-3.5 pt-2.5 border-t border-[#374151] flex items-center justify-between text-xs">
-        <span className="text-slate-400 font-semibold truncate max-w-[160px]">
+      <div className={`mt-3.5 pt-2.5 border-t flex items-center justify-between text-xs ${isDark ? 'border-[#374151]' : 'border-slate-200/90'}`}>
+        <span className={`font-semibold truncate max-w-[160px] ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
           ทั่วประเทศ ({bureau.code})
         </span>
 
@@ -1306,12 +1507,18 @@ const BureauCard: React.FC<BureauCardProps> = ({
             e.stopPropagation();
             onOpenDetail();
           }}
-          className="px-3 py-1 rounded-lg border border-[#C5A059] bg-[#2C3547] text-amber-300 font-bold flex items-center gap-1 hover:bg-[#384359] shadow-2xs transition-all shrink-0 cursor-pointer"
+          className={`px-3 py-1 rounded-lg border font-bold flex items-center gap-1 shadow-2xs transition-all shrink-0 cursor-pointer ${
+            isDark
+              ? 'border-[#C5A059] bg-[#2C3547] text-amber-300 hover:bg-[#384359]'
+              : 'border-sky-300 bg-sky-50 text-sky-800 hover:bg-sky-100'
+          }`}
         >
           <span>ดูทั้งหน่วย</span>
-          <ArrowRight className="w-3.5 h-3.5 text-amber-300" />
+          <ArrowRight className="w-3.5 h-3.5" />
         </button>
       </div>
     </div>
   );
 };
+
+const BureauCard = React.memo(BureauCardComponent);

@@ -165,9 +165,6 @@ export const DirectoryCover: React.FC<DirectoryCoverProps> = ({
         <div className={`absolute bottom-5 left-5 w-10 h-10 border-b-2 border-l-2 pointer-events-none ${isBatman ? 'border-[#FFE500]' : 'border-amber-500'}`} />
         <div className={`absolute bottom-5 right-5 w-10 h-10 border-b-2 border-r-2 pointer-events-none ${isBatman ? 'border-[#FFE500]' : 'border-amber-500'}`} />
 
-        {/* Ambient Radial Glow Behind Emblem */}
-        <div className="absolute top-24 left-1/2 -translate-x-1/2 w-[480px] h-[480px] bg-gradient-to-b from-amber-500/10 via-amber-500/5 to-transparent rounded-full blur-3xl pointer-events-none -z-0 animate-pulse" />
-
         {/* Official Document Content */}
         <div className="relative z-10 flex flex-col items-center text-center">
           {/* Header Institution Classification */}
@@ -180,7 +177,7 @@ export const DirectoryCover: React.FC<DirectoryCoverProps> = ({
           </div>
 
           {/* Central Official Golden Police Emblem */}
-          <div className="mb-8 transform hover:scale-105 transition-transform duration-300 drop-shadow-[0_12px_30px_rgba(212,175,55,0.35)]">
+          <div className="mb-8">
             <PoliceEmblem size={145} />
           </div>
 
@@ -189,10 +186,10 @@ export const DirectoryCover: React.FC<DirectoryCoverProps> = ({
             <h1
               className={`text-3xl sm:text-4xl md:text-5xl font-black tracking-tight font-['Chakra_Petch',sans-serif] ${
                 isBatman
-                  ? 'text-[#FFE500] drop-shadow-[0_2px_12px_rgba(255,229,0,0.4)]'
+                  ? 'text-[#FFE500]'
                   : isDark
-                  ? 'text-transparent bg-clip-text bg-gradient-to-r from-amber-100 via-amber-300 to-amber-100'
-                  : 'text-[#1E293B] drop-shadow-xs'
+                  ? 'text-amber-100'
+                  : 'text-[#1E293B]'
               }`}
             >
               สายบังคับบัญชา
@@ -353,10 +350,10 @@ export const DirectoryCover: React.FC<DirectoryCoverProps> = ({
                     onClick={() => onSelectDivision(item.id)}
                     className={`p-3.5 rounded-2xl border text-center transition-all cursor-pointer group flex flex-col justify-between ${
                       isBatman
-                        ? 'bg-[#12121A] border-[#2A2A3C] hover:border-[#FFE500] hover:scale-[1.02]'
+                        ? 'bg-[#12121A] border-[#2A2A3C] hover:border-[#FFE500]'
                         : isDark
-                        ? 'bg-slate-900/60 border-slate-800 hover:border-amber-400 hover:scale-[1.02]'
-                        : 'bg-white/90 border-slate-200 hover:border-amber-500 hover:bg-[#FEF9EE] hover:scale-[1.02] shadow-2xs'
+                        ? 'bg-slate-900/60 border-slate-800 hover:border-amber-400'
+                        : 'bg-white/90 border-slate-200 hover:border-amber-500 hover:bg-[#FEF9EE] shadow-2xs'
                     }`}
                   >
                     <div>

@@ -18,17 +18,17 @@ export interface CustomThemeSettings {
 }
 
 export const DEFAULT_CUSTOM_THEME: CustomThemeSettings = {
-  chartThemePreset: 'gold-navy',
-  chartAccentColor: '#C5A059',
-  chartCardBg: '#1E2533',
+  chartThemePreset: 'clean-light',
+  chartAccentColor: '#0284C7',
+  chartCardBg: '#FFFFFF',
   bgType: 'preset',
-  bgPresetId: 'charcoal',
-  customBgColor: '#181D27',
-  bgIsDark: true,
+  bgPresetId: 'clean-light',
+  customBgColor: '#F4F7FB',
+  bgIsDark: false,
   textType: 'preset',
-  customTextColor: '#F8FAFC',
-  customTextMutedColor: '#94A3B8',
-  customHeadingColor: '#FFE066',
+  customTextColor: '#0F172A',
+  customTextMutedColor: '#64748B',
+  customHeadingColor: '#0369A1',
 };
 
 export interface BackgroundPresetOption {

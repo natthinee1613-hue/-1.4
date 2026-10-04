@@ -12,7 +12,8 @@ import {
   DivisionItem,
   PoliceBureauNode,
   PoliceGroup,
-  getOfficersForDivision
+  buildOfficerIndex,
+  getOfficersForDivisionIndexed
 } from '../data/rtpStructure';
 import * as XLSX from 'xlsx';
 import {
@@ -86,14 +87,16 @@ export const DivisionsDirectoryTable: React.FC<DivisionsDirectoryTableProps> = (
     return map;
   }, []);
 
+  const officerIndex = useMemo(() => buildOfficerIndex(officers), [officers]);
+
   // Compute officer stats for each division
   const divisionsWithStats = useMemo(() => {
     return allDivisions.map((div) => {
       const parentBureau = bureauMap.get(div.bureauId) || RTP_BUREAUS_DATA[0];
-      const { officers: matchedOffs, matchedDivisionName } = getOfficersForDivision(
+      const { officers: matchedOffs, matchedDivisionName } = getOfficersForDivisionIndexed(
         div.displayName,
         parentBureau,
-        officers
+        officerIndex
       );
 
       const total = matchedOffs.length;
@@ -112,7 +115,7 @@ export const DivisionsDirectoryTable: React.FC<DivisionsDirectoryTableProps> = (
         officers: matchedOffs,
       };
     });
-  }, [allDivisions, bureauMap, officers]);
+  }, [allDivisions, bureauMap, officerIndex]);
 
   // Categories list for filter
   const categoriesList = useMemo(() => {

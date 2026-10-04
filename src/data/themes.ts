@@ -51,7 +51,82 @@ export interface AppTheme {
 }
 
 export const THEMES: AppTheme[] = [
-  // 1. ดาร์กเกรย์ชาร์โคล & ทองคำเปลว ตร. (Executive Charcoal Dark Gray & Gold Theme) - สีเทาเข้ม
+  // 1. พาสเทลราชการตำรวจ (มาตรฐาน ตร.) - ธีมหลัก
+  {
+    id: 'police-pastel',
+    name: 'พาสเทลราชการตำรวจ',
+    englishName: 'Royal Police Pastel',
+    description: 'โทนสีพาสเทลราชการ ฟ้าไอซ์บลู ครีมทองนวล เซจมินต์ และชมพูกลีบบัว สบายตาสูง สดใส สง่างาม สมเกียรติ',
+    isDark: false,
+    swatches: ['#F4F7FB', '#E0F2FE', '#FEF3C7', '#D1FAE5', '#0369A1', '#C5A059'],
+    bgApp: 'bg-[#F4F7FB]',
+    textMain: 'text-slate-900',
+    textMuted: 'text-slate-600',
+    headerBg: 'bg-white/98',
+    headerBorder: 'border-slate-200/90 shadow-2xs',
+    navActive: 'bg-[#E0F2FE] text-[#0369A1] border-[#7DD3FC] font-black shadow-2xs',
+    navInactive: 'text-slate-600 hover:text-slate-900 hover:bg-slate-100',
+    cardBg: 'bg-white',
+    cardBorder: 'border-slate-200/90 shadow-xs hover:border-[#38BDF8]',
+    inputBg: 'bg-slate-50/90',
+    inputBorder: 'border-slate-300 focus:border-sky-500 focus:bg-white',
+    tableHeaderBg: 'bg-slate-100/90 text-slate-900',
+    tableBorder: 'border-slate-200',
+    tableRowHover: 'hover:bg-sky-50/60',
+    vacantRowBg: 'bg-amber-50/70',
+    orgChart: {
+      commander: {
+        bg: 'bg-gradient-to-b from-white via-sky-50/60 to-[#E0F2FE]/70',
+        border: 'border-[#38BDF8] shadow-md shadow-sky-500/10',
+        text: 'text-[#0B2545] font-black',
+        subtext: 'text-[#0284C7]',
+        badge: 'bg-[#0369A1] text-white font-black border-[#0284C7]',
+      },
+      deputiesBg: 'bg-gradient-to-r from-sky-50/80 via-white to-sky-50/80',
+      deputiesBorder: 'border-sky-200',
+      deputiesText: 'text-[#0369A1]',
+      divisions: {
+        'สกพ.': {
+          bg: 'bg-white',
+          header: 'bg-gradient-to-r from-amber-50 to-white',
+          border: 'border-amber-300/90 hover:border-amber-500',
+          text: 'text-amber-950 font-black',
+          badge: 'bg-amber-100 text-amber-900 border-amber-300',
+          subItem: 'bg-slate-50/80 hover:bg-amber-50/80 border-slate-200/80 text-slate-800 font-medium',
+          bar: 'from-amber-400 to-amber-500',
+        },
+        'กองอัตรากำลัง สกพ.': {
+          bg: 'bg-white',
+          header: 'bg-gradient-to-r from-emerald-50 to-white',
+          border: 'border-emerald-300/90 hover:border-emerald-500',
+          text: 'text-emerald-950 font-black',
+          badge: 'bg-emerald-100 text-emerald-900 border-emerald-300',
+          subItem: 'bg-slate-50/80 hover:bg-emerald-50/80 border-slate-200/80 text-slate-800 font-medium',
+          bar: 'from-emerald-400 to-emerald-500',
+        },
+        'กองทะเบียนพล สกพ.': {
+          bg: 'bg-white',
+          header: 'bg-gradient-to-r from-sky-50 to-white',
+          border: 'border-sky-300/90 hover:border-sky-500',
+          text: 'text-sky-950 font-black',
+          badge: 'bg-sky-100 text-sky-900 border-sky-300',
+          subItem: 'bg-slate-50/80 hover:bg-sky-50/80 border-slate-200/80 text-slate-800 font-medium',
+          bar: 'from-sky-400 to-sky-500',
+        },
+        'กองสวัสดิการ สกพ.': {
+          bg: 'bg-white',
+          header: 'bg-gradient-to-r from-rose-50 to-white',
+          border: 'border-rose-300/90 hover:border-rose-500',
+          text: 'text-rose-950 font-black',
+          badge: 'bg-rose-100 text-rose-900 border-rose-300',
+          subItem: 'bg-slate-50/80 hover:bg-rose-50/80 border-slate-200/80 text-slate-800 font-medium',
+          bar: 'from-rose-400 to-rose-500',
+        },
+      },
+    },
+  },
+
+  // 2. ดาร์กเกรย์ชาร์โคล & ทองคำเปลว ตร. (Executive Charcoal Dark Gray & Gold Theme) - สีเทาเข้ม
   {
     id: 'executive-dark-gray',
     name: 'ดาร์กเกรย์ชาร์โคล ตร. (Executive Dark Gray)',

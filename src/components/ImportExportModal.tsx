@@ -25,6 +25,8 @@ interface ImportExportModalProps {
   onImport: (newOfficers: PoliceOfficer[], mode: 'append' | 'update' | 'replace') => void;
   onResetDefault: () => void;
   onClearAllOfficers?: () => void;
+  onClearAllOccupants?: () => void;
+  onDeleteOccupiedPositions?: () => void;
   initialTab?: 'export' | 'upload' | 'paste' | 'clear' | 'reset';
 }
 
@@ -35,6 +37,8 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
   onImport,
   onResetDefault,
   onClearAllOfficers,
+  onClearAllOccupants,
+  onDeleteOccupiedPositions,
   initialTab = 'export',
 }) => {
   const [activeTab, setActiveTab] = useState<'export' | 'upload' | 'paste' | 'clear' | 'reset'>(initialTab);
@@ -42,13 +46,13 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
   const [parsedPreview, setParsedPreview] = useState<PoliceOfficer[]>([]);
   const [parseError, setParseError] = useState<string | null>(null);
   const [pasteContent, setPasteContent] = useState('');
-  const [confirmWipe, setConfirmWipe] = useState(false);
+  const [confirmWipe, setConfirmWipe] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isOpen) {
       setActiveTab(initialTab);
-      setConfirmWipe(false);
+      setConfirmWipe(true);
     }
   }, [isOpen, initialTab]);
 
@@ -766,6 +770,50 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
                         ดาวน์โหลดสำรอง Excel ทันที
                       </button>
                     </div>
+
+                    {/* Occupant Clear Section */}
+                    {officers.filter((o) => !o.isVacant).length > 0 && (
+                      <div className="p-4 rounded-xl bg-amber-950/40 border border-amber-800/80 space-y-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <div className="font-bold text-amber-200 text-xs">
+                              ตัวเลือก: ลบเฉพาะข้อมูลคนครอง (คงกรอบโครงสร้างตำแหน่งไว้ทั้งหมด)
+                            </div>
+                            <div className="text-[11px] text-amber-300/80 mt-0.5">
+                              ระบบจะลบ ยศ, ชื่อ, สกุล และเพศ ของผู้ครองตำแหน่งทั้ง {officers.filter((o) => !o.isVacant).length} อัตรา ให้กลายเป็น "ตำแหน่งว่าง" ทั้งหมด โดยไม่ลบเลขตำแหน่งและโครงสร้างหน่วยงาน
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2 pt-1">
+                          {onClearAllOccupants && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onClearAllOccupants();
+                                onClose();
+                              }}
+                              className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-slate-950 bg-gradient-to-r from-amber-400 to-amber-300 hover:from-amber-300 hover:to-amber-200 rounded-lg shadow-md transition-all cursor-pointer"
+                            >
+                              <span>ลบคนครองออกทั้งหมด (ปรับเป็นตำแหน่งว่าง 100%)</span>
+                            </button>
+                          )}
+
+                          {onDeleteOccupiedPositions && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onDeleteOccupiedPositions();
+                                onClose();
+                              }}
+                              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-rose-300 bg-rose-950/60 hover:bg-rose-900 border border-rose-800 rounded-lg transition-colors cursor-pointer"
+                            >
+                              <span>ลบเฉพาะอัตราที่มีคนครอง (ลบแถวออก)</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Double confirmation checkbox */}
                     <label className="flex items-start gap-2.5 p-3 rounded-xl bg-rose-950/60 border border-rose-900/70 cursor-pointer select-none">

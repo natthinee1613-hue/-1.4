@@ -16,6 +16,7 @@ app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 const DATA_DIR = path.resolve(__dirname, 'data');
 const DATA_FILE = path.join(DATA_DIR, 'officers.json');
 const SRC_DATA_FILE = path.resolve(__dirname, 'src', 'data', 'latestPersonnel.json');
+const NATIONAL_DATA_FILE = path.join(DATA_DIR, 'national_police.json');
 
 // Ensure data directory exists
 if (!fs.existsSync(DATA_DIR)) {
@@ -98,6 +99,68 @@ app.post('/api/officers', (req, res) => {
   }
 });
 
+app.post('/api/officers/clear-occupants', (req, res) => {
+  try {
+    const published = getPublishedOfficers() || [];
+    const updated = published.map((o: any) => ({
+      ...o,
+      isVacant: true,
+      rank: '-',
+      firstName: '',
+      lastName: '',
+      gender: '-',
+      updatedAt: new Date().toISOString(),
+    }));
+    const payload = JSON.stringify(updated, null, 2);
+    fs.writeFileSync(DATA_FILE, payload, 'utf8');
+    try {
+      const srcDir = path.resolve(__dirname, 'src', 'data');
+      if (fs.existsSync(srcDir)) {
+        fs.writeFileSync(SRC_DATA_FILE, payload, 'utf8');
+      }
+    } catch (e) {
+      console.warn('Could not write backup to src/data:', e);
+    }
+    console.log(`[CLEAR OCCUPANTS] Cleared all occupants. All ${updated.length} positions are now vacant.`);
+    return res.json({
+      success: true,
+      message: `ลบข้อมูลคนครองออกทั้งหมดเรียบร้อยแล้ว (ปรับเป็นตำแหน่งว่างทั้งหมด ${updated.length} อัตรา)`,
+      count: updated.length,
+      data: updated,
+    });
+  } catch (err: any) {
+    console.error('Error clearing occupants:', err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/officers/delete-occupied', (req, res) => {
+  try {
+    const published = getPublishedOfficers() || [];
+    const updated = published.filter((o: any) => o.isVacant);
+    const payload = JSON.stringify(updated, null, 2);
+    fs.writeFileSync(DATA_FILE, payload, 'utf8');
+    try {
+      const srcDir = path.resolve(__dirname, 'src', 'data');
+      if (fs.existsSync(srcDir)) {
+        fs.writeFileSync(SRC_DATA_FILE, payload, 'utf8');
+      }
+    } catch (e) {
+      console.warn('Could not write backup to src/data:', e);
+    }
+    console.log(`[DELETE OCCUPIED] Deleted occupied positions. Remaining vacant: ${updated.length}.`);
+    return res.json({
+      success: true,
+      message: `ลบอัตราที่มีคนครองออกทั้งหมดเรียบร้อยแล้ว (เหลือตำแหน่งว่าง ${updated.length} อัตรา)`,
+      count: updated.length,
+      data: updated,
+    });
+  } catch (err: any) {
+    console.error('Error deleting occupied positions:', err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 app.post('/api/officers/clear', (req, res) => {
   try {
     const payload = JSON.stringify([], null, 2);
@@ -140,6 +203,51 @@ app.post('/api/officers/reset', (req, res) => {
       count: 0,
     });
   } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// National Police Manpower Status Endpoints
+app.get('/api/national-police', (req, res) => {
+  try {
+    if (fs.existsSync(NATIONAL_DATA_FILE)) {
+      const data = fs.readFileSync(NATIONAL_DATA_FILE, 'utf8');
+      const parsed = JSON.parse(data);
+      if (Array.isArray(parsed)) {
+        return res.json({
+          success: true,
+          count: parsed.length,
+          data: parsed,
+          updatedAt: fs.statSync(NATIONAL_DATA_FILE).mtime,
+        });
+      }
+    }
+  } catch (err) {
+    console.error('Failed reading national police file:', err);
+  }
+  return res.json({
+    success: false,
+    count: 0,
+    data: [],
+  });
+});
+
+app.post('/api/national-police', (req, res) => {
+  try {
+    const { rows } = req.body;
+    if (!Array.isArray(rows)) {
+      return res.status(400).json({ success: false, error: 'ข้อมูลต้องเป็น Array' });
+    }
+    const payload = JSON.stringify(rows, null, 2);
+    fs.writeFileSync(NATIONAL_DATA_FILE, payload, 'utf8');
+    return res.json({
+      success: true,
+      count: rows.length,
+      message: `บันทึกข้อมูลสถานภาพกำลังพลตำรวจทั้งประเทศ ${rows.length} รายการ เรียบร้อย`,
+      updatedAt: new Date().toISOString(),
+    });
+  } catch (err: any) {
+    console.error('Error saving national police file:', err);
     return res.status(500).json({ success: false, error: err.message });
   }
 });

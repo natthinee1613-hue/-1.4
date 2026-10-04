@@ -16,7 +16,8 @@ import {
   CheckSquare,
   Square,
   Building,
-  Briefcase
+  Briefcase,
+  Globe,
 } from 'lucide-react';
 
 interface DirectoryTableProps {
@@ -28,10 +29,13 @@ interface DirectoryTableProps {
   onOpenImportExport: (tab?: 'export' | 'upload' | 'paste' | 'clear' | 'reset') => void;
   onViewOfficer: (officer: PoliceOfficer) => void;
   onClearAllOfficers?: () => void;
+  onClearAllOccupants?: () => void;
+  onDeleteOccupiedPositions?: () => void;
   initialDivisionFilter?: string;
   initialSubDivisionFilter?: string;
   onClearFilters?: () => void;
   isPastelTheme?: boolean;
+  onOpenNationalStatus?: () => void;
 }
 
 export const DirectoryTable: React.FC<DirectoryTableProps> = ({
@@ -42,10 +46,14 @@ export const DirectoryTable: React.FC<DirectoryTableProps> = ({
   onDeleteMultiple,
   onOpenImportExport,
   onViewOfficer,
+  onClearAllOfficers,
+  onClearAllOccupants,
+  onDeleteOccupiedPositions,
   initialDivisionFilter = 'all',
   initialSubDivisionFilter = 'all',
   onClearFilters,
   isPastelTheme = true,
+  onOpenNationalStatus,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [divisionFilter, setDivisionFilter] = useState(initialDivisionFilter);
@@ -328,15 +336,57 @@ export const DirectoryTable: React.FC<DirectoryTableProps> = ({
             ศูนย์ดาวน์โหลด / อัปเดตข้อมูล
           </button>
 
+          {onOpenNationalStatus && (
+            <button
+              onClick={onOpenNationalStatus}
+              className={`flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl border transition-colors cursor-pointer shadow-2xs ${
+                isPastelTheme
+                  ? 'text-blue-700 bg-blue-50/80 hover:bg-blue-100 border-blue-200'
+                  : 'text-blue-300 bg-blue-950/60 hover:bg-blue-900 border-blue-700'
+              }`}
+              title="ดูตารางสรุปสถานภาพกำลังพลตำรวจทั้งประเทศ"
+            >
+              <Globe className="w-3.5 h-3.5 text-blue-500" />
+              <span>สถานภาพตำรวจทั้งประเทศ</span>
+            </button>
+          )}
+
+          {officers.filter((o) => !o.isVacant).length > 0 && onClearAllOccupants && (
+            <button
+              onClick={onClearAllOccupants}
+              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl border transition-colors cursor-pointer shadow-2xs ${
+                isPastelTheme
+                  ? 'text-amber-800 bg-amber-50/90 hover:bg-amber-100 border-amber-300'
+                  : 'text-amber-300 bg-amber-950/40 hover:bg-amber-900/60 border-amber-800/80'
+              }`}
+              title="ลบข้อมูลคนครองออกทั้งหมด โดยคงกรอบตำแหน่งไว้และปรับให้เป็นตำแหน่งว่างทั้งหมด (0 คนครอง)"
+            >
+              <UserX className="w-3.5 h-3.5 text-amber-600" />
+              <span>ลบคนครองออกทั้งหมด ({officers.filter((o) => !o.isVacant).length})</span>
+            </button>
+          )}
+
           {officers.length > 0 && (
             <button
-              onClick={() => onOpenImportExport('clear')}
+              onClick={() => {
+                if (
+                  window.confirm(
+                    `⚠️ ยืนยันการลบอัตรากำลังพลทั้งหมดในระบบจำนวน ${officers.length} อัตรา ให้กลายเป็น 0 อัตรา ทันที ใช่หรือไม่?`
+                  )
+                ) {
+                  if (onClearAllOfficers) {
+                    onClearAllOfficers();
+                  } else {
+                    onOpenImportExport('clear');
+                  }
+                }
+              }}
               className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl border transition-colors cursor-pointer shadow-2xs ${
                 isPastelTheme
                   ? 'text-rose-700 bg-rose-50/80 hover:bg-rose-100 border-rose-200'
                   : 'text-rose-300 bg-rose-950/40 hover:bg-rose-900/60 border-rose-800/80'
               }`}
-              title="ลบอัตราข้อมูลทั้งหมดในระบบ (เชื่อมโยงในศูนย์ดาวน์โหลดและอัปเดตข้อมูลกำลังพล)"
+              title="ลบอัตราข้อมูลทั้งหมดในระบบให้เป็น 0 อัตราทันที"
             >
               <Trash2 className="w-3.5 h-3.5 text-rose-500" />
               ลบอัตราทั้งหมด

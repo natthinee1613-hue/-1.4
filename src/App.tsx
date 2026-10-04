@@ -127,7 +127,7 @@ export default function App() {
 
   // Active Theme & Custom Appearance Settings (Persisted to storage)
   const [selectedThemeId, setSelectedThemeId] = useState<string>(() => {
-    return safeLocalStorageGet('police_app_theme_id') || THEMES[0].id;
+    return safeLocalStorageGet('police_app_theme_id') || 'police-pastel';
   });
 
   const [customThemeSettings, setCustomThemeSettings] = useState<CustomThemeSettings>(() => {
@@ -154,6 +154,21 @@ export default function App() {
     safeLocalStorageSet('police_app_theme_id', themeId);
     const matched = THEMES.find((t) => t.id === themeId);
     if (matched) {
+      if (!matched.isDark) {
+        const pastelCustom: CustomThemeSettings = {
+          ...customThemeSettings,
+          bgIsDark: false,
+          customBgColor: '#F4F7FB',
+          customTextColor: '#0F172A',
+          customHeadingColor: '#0369A1',
+          customTextMutedColor: '#64748B',
+          chartThemePreset: 'clean-light',
+          chartAccentColor: '#0284C7',
+          chartCardBg: '#FFFFFF',
+        };
+        setCustomThemeSettings(pastelCustom);
+        safeLocalStorageSet('police_app_custom_theme_config', JSON.stringify(pastelCustom));
+      }
       showToast(`เปลี่ยนธีมระบบเป็น "${matched.name}" เรียบร้อย`);
     }
   };
@@ -311,7 +326,7 @@ export default function App() {
       {/* Toast Notification */}
       {toastMessage && (
         <div
-          className={`fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-2xl shadow-2xl animate-bounce text-xs border ${
+          className={`fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-2xl shadow-xl text-xs border ${
             currentTheme.isDark
               ? 'bg-slate-900 border-amber-500/50 text-slate-100'
               : 'bg-white border-blue-500/80 text-slate-900'
@@ -324,7 +339,7 @@ export default function App() {
 
       {/* Top Bar Contract (Dignified Navy Header) */}
       <header
-        className={`sticky top-0 z-40 w-full backdrop-blur-md border-b print:hidden transition-colors ${
+        className={`sticky top-0 z-40 w-full border-b print:hidden transition-colors ${
           currentTheme.headerBg
         } ${currentTheme.headerBorder}`}
       >
@@ -389,7 +404,7 @@ export default function App() {
               >
                 <FileText className="w-3.5 h-3.5 text-red-400" />
                 <span>คำสั่งและประกาศ</span>
-                <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
+                <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
               </button>
             </nav>
           </div>
@@ -412,12 +427,12 @@ export default function App() {
               disabled={isPublishing}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl border transition-all cursor-pointer shadow-2xs ${
                 isPublishing
-                  ? 'bg-amber-100 text-amber-800 border-amber-300 animate-pulse'
+                  ? 'bg-amber-100 text-amber-800 border-amber-300'
                   : 'bg-emerald-950/80 text-emerald-300 border-emerald-700/80 hover:bg-emerald-900'
               }`}
               title="สถานะข้อมูลบนเว็บไซต์: เผยแพร่แล้ว สามารถกดเพื่อเผยแพร่ข้อมูลกำลังพลล่าสุดลงสู่เว็บไซต์จริงได้ทันที"
             >
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse inline-block shrink-0" />
+              <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block shrink-0" />
               <Globe className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
               <span className="font-['Prompt',sans-serif] whitespace-nowrap hidden lg:inline">
                 {isPublishing ? 'กำลังเผยแพร่...' : `เผยแพร่แล้ว (${officers.length} อัตรา)`}
